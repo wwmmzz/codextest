@@ -31,11 +31,15 @@ Completed:
 - Focused Vitest coverage for QuickJS execution and result summarization.
 - Multi-test judge execution and summaries.
 - Focused Vitest coverage for multi-case judge result summarization.
+- Problem detail page can run visible tests or submit all tests through the QuickJS judge worker.
+- Judge result rendering in the problem workspace, including summary status and per-case details.
+- Focused Vitest coverage for judge request construction.
+- IndexedDB submission records for submit-mode judge results.
+- Submission history rendering in the problem workspace and global submissions page.
+- Focused Vitest coverage for submission record creation and storage service behavior.
 
 Not implemented yet:
 
-- Judge result rendering.
-- IndexedDB submission records.
 - GitHub Actions + GitHub Pages based AI static problem updates for daily/weekly featured problems.
 - AI assistant features.
 
@@ -61,11 +65,16 @@ Not implemented yet:
 - `src/data/problems.ts`: current static problem set and helpers.
 - `src/db/appDb.ts`: Dexie database definition.
 - `src/db/draftStorage.ts`: IndexedDB-backed draft storage adapter.
+- `src/db/submissionStorage.ts`: IndexedDB-backed submission storage adapter.
 - `src/services/drafts.ts`: testable draft load/save helpers.
+- `src/services/submissions.ts`: testable submission record creation and save helpers.
 - `src/hooks/useProblemDraft.ts`: problem editor draft loading and autosave hook.
+- `src/hooks/useSubmissions.ts`: local submission history loading hook.
+- `src/components/SubmissionHistory.tsx`: shared submission history renderer.
 - `src/judge/types.ts`: judge request, response, test case, and result types.
 - `src/judge/compare.ts`: deep comparison helper for actual and expected results.
 - `src/judge/executor.ts`: QuickJS-backed single test case execution.
+- `src/judge/request.ts`: problem-to-judge request construction helpers.
 - `src/judge/runner.ts`: multi-test judge execution and result summarization.
 - `src/judge/worker.ts`: Web Worker message handler for judge requests.
 - `src/judge/client.ts`: browser helper for creating and messaging the judge worker.
@@ -111,10 +120,8 @@ All current problems are `Easy` and use JSON-serializable inputs/expected output
 
 ## Next Steps
 
-1. Render judge results in the problem workspace.
-2. Store submissions in IndexedDB.
-3. Add GitHub Actions + GitHub Pages based AI static problem updates for daily/weekly featured problems, after the core brushing loop is complete.
-4. Add AI assistant features.
+1. Add GitHub Actions + GitHub Pages based AI static problem updates for daily/weekly featured problems, after the core brushing loop is complete.
+2. Add AI assistant features.
 
 ## Future Static Problem Automation
 

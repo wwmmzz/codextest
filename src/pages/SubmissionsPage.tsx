@@ -1,6 +1,10 @@
-import { Card, Empty, Typography } from 'antd'
+import { Card, Typography } from 'antd'
+import { SubmissionHistory } from '../components/SubmissionHistory'
+import { useSubmissions } from '../hooks/useSubmissions'
 
 export default function SubmissionsPage() {
+  const { submissions, loading, error } = useSubmissions()
+
   return (
     <div className="page">
       <div className="page-header">
@@ -15,7 +19,12 @@ export default function SubmissionsPage() {
       </div>
 
       <Card>
-        <Empty description="暂无提交记录" />
+        <SubmissionHistory
+          submissions={submissions}
+          loading={loading}
+          error={error}
+          showProblemLink
+        />
       </Card>
     </div>
   )

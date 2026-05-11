@@ -1,13 +1,30 @@
 import { ArrowLeftOutlined, PlayCircleOutlined, SendOutlined } from '@ant-design/icons'
 import Editor from '@monaco-editor/react'
-import { Button, Card, Descriptions, Empty, Space, Tabs, Tag, Typography } from 'antd'
+import { Alert, Button, Card, Descriptions, Empty, List, Space, Tabs, Tag, Typography } from 'antd'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, Navigate, useParams } from 'react-router-dom'
+import { SubmissionHistory } from '../components/SubmissionHistory'
 import { difficultyColor, getProblemById } from '../data/problems'
+import { indexedDbSubmissionStorage } from '../db/submissionStorage'
 import { useProblemDraft, type DraftSaveStatus } from '../hooks/useProblemDraft'
+import { useSubmissions } from '../hooks/useSubmissions'
+import {
+  createJudgeRequest,
+  createJudgeWorker,
+  isJudgeWorkerResponse,
+  postJudgeRequest,
+} from '../judge'
+import { saveJudgeSubmission } from '../services/submissions'
+import type {
+  JudgeCaseStatus,
+  JudgeResult,
+  JudgeResultStatus,
+  JudgeRunMode,
+} from '../judge'
 import type { Problem } from '../types/problem'
 
 function formatValue(value: unknown) {
-  return JSON.stringify(value)
+  return JSON.stringify(value) ?? String(value)
 }
 
 const draftStatusText: Record<DraftSaveStatus, string> = {
@@ -16,6 +33,53 @@ const draftStatusText: Record<DraftSaveStatus, string> = {
   saving: '保存中',
   saved: '草稿已保存',
   error: '草稿保存失败',
+}
+
+const judgeModeText: Record<JudgeRunMode, string> = {
+  run: '运行示例',
+  submit: '提交',
+}
+
+const judgeStatusText: Record<JudgeResultStatus, string> = {
+  accepted: '通过',
+  'wrong-answer': '答案错误',
+  'runtime-error': '运行错误',
+  'time-limit-exceeded': '超出时间限制',
+  'internal-error': '内部错误',
+}
+
+const judgeStatusColor: Record<JudgeResultStatus, string> = {
+  accepted: 'success',
+  'wrong-answer': 'error',
+  'runtime-error': 'error',
+  'time-limit-exceeded': 'warning',
+  'internal-error': 'default',
+}
+
+const judgeCaseStatusText: Record<JudgeCaseStatus, string> = {
+  passed: '通过',
+  failed: '失败',
+  'runtime-error': '运行错误',
+  'time-limit-exceeded': '超时',
+}
+
+const judgeCaseStatusColor: Record<JudgeCaseStatus, string> = {
+  passed: 'success',
+  failed: 'error',
+  'runtime-error': 'error',
+  'time-limit-exceeded': 'warning',
+}
+
+function getResultAlertType(status: JudgeResultStatus) {
+  if (status === 'accepted') {
+    return 'success'
+  }
+
+  if (status === 'time-limit-exceeded') {
+    return 'warning'
+  }
+
+  return 'error'
 }
 
 export default function ProblemDetailPage() {
@@ -35,6 +99,116 @@ function ProblemWorkspace({ problem }: { problem: Problem }) {
     problem.id,
     problem.starterCode,
   )
+  const [activeMode, setActiveMode] = useState<JudgeRunMode | null>(null)
+  const [judgeResult, setJudgeResult] = useState<JudgeResult | null>(null)
+  const [judgeError, setJudgeError] = useState<string | null>(null)
+  const [submissionSaveError, setSubmissionSaveError] = useState<string | null>(
+    null,
+  )
+  const [submissionRefreshKey, setSubmissionRefreshKey] = useState(0)
+  const {
+    submissions,
+    loading: submissionsLoading,
+    error: submissionsError,
+  } = useSubmissions(problem.id, submissionRefreshKey)
+  const workerRef = useRef<Worker | null>(null)
+  const activeRequestIdRef = useRef<string | null>(null)
+
+  useEffect(() => {
+    return () => {
+      workerRef.current?.terminate()
+      workerRef.current = null
+    }
+  }, [])
+
+  const runJudge = useCallback(
+    (mode: JudgeRunMode) => {
+      workerRef.current?.terminate()
+
+      const request = createJudgeRequest(problem, code, mode)
+      const worker = createJudgeWorker()
+
+      workerRef.current = worker
+      activeRequestIdRef.current = request.requestId
+      setActiveMode(mode)
+      setJudgeError(null)
+      setJudgeResult(null)
+      setSubmissionSaveError(null)
+
+      const finishRequest = () => {
+        worker.terminate()
+
+        if (workerRef.current === worker) {
+          workerRef.current = null
+        }
+
+        if (activeRequestIdRef.current === request.requestId) {
+          activeRequestIdRef.current = null
+          setActiveMode(null)
+        }
+      }
+
+      worker.onmessage = (event: MessageEvent<unknown>) => {
+        if (!isJudgeWorkerResponse(event)) {
+          return
+        }
+
+        const message = event.data
+
+        if (
+          message.type === 'judge-result' &&
+          message.result.requestId === request.requestId
+        ) {
+          const result = message.result
+
+          setJudgeResult(result)
+
+          if (result.mode === 'submit') {
+            void saveJudgeSubmission(
+              indexedDbSubmissionStorage,
+              problem,
+              request.code,
+              result,
+            )
+              .then(() => {
+                setSubmissionRefreshKey((current) => current + 1)
+              })
+              .catch((caughtError: unknown) => {
+                setSubmissionSaveError(
+                  caughtError instanceof Error
+                    ? caughtError.message
+                    : '提交记录保存失败',
+                )
+              })
+              .finally(finishRequest)
+            return
+          }
+
+          finishRequest()
+          return
+        }
+
+        if (
+          message.type === 'judge-error' &&
+          message.requestId === request.requestId
+        ) {
+          setJudgeError(message.error)
+          finishRequest()
+        }
+      }
+
+      worker.onerror = (event) => {
+        event.preventDefault()
+        setJudgeError(event.message || '判题 Worker 运行失败')
+        finishRequest()
+      }
+
+      postJudgeRequest(worker, request)
+    },
+    [code, problem],
+  )
+
+  const isJudging = activeMode !== null
 
   return (
     <div className="page">
@@ -58,8 +232,21 @@ function ProblemWorkspace({ problem }: { problem: Problem }) {
           </Space>
         </Space>
         <Space>
-          <Button icon={<PlayCircleOutlined />}>运行示例</Button>
-          <Button type="primary" icon={<SendOutlined />}>
+          <Button
+            icon={<PlayCircleOutlined />}
+            loading={activeMode === 'run'}
+            disabled={isJudging && activeMode !== 'run'}
+            onClick={() => runJudge('run')}
+          >
+            运行示例
+          </Button>
+          <Button
+            type="primary"
+            icon={<SendOutlined />}
+            loading={activeMode === 'submit'}
+            disabled={isJudging && activeMode !== 'submit'}
+            onClick={() => runJudge('submit')}
+          >
             提交
           </Button>
         </Space>
@@ -159,9 +346,11 @@ function ProblemWorkspace({ problem }: { problem: Problem }) {
                 key: 'submissions',
                 label: '提交记录',
                 children: (
-                  <Typography.Text className="muted">
-                    本地提交记录会在接入 IndexedDB 后显示。
-                  </Typography.Text>
+                  <SubmissionHistory
+                    submissions={submissions}
+                    loading={submissionsLoading}
+                    error={submissionsError}
+                  />
                 ),
               },
             ]}
@@ -198,12 +387,121 @@ function ProblemWorkspace({ problem }: { problem: Problem }) {
             />
           </Card>
           <Card title="运行结果" className="panel">
-            <Typography.Text className="muted">
-              QuickJS Worker 判题结果会显示在这里。
-            </Typography.Text>
+            <JudgeResultPanel
+              activeMode={activeMode}
+              error={judgeError}
+              result={judgeResult}
+              submissionSaveError={submissionSaveError}
+            />
           </Card>
         </Space>
       </div>
     </div>
+  )
+}
+
+function JudgeResultPanel({
+  activeMode,
+  error,
+  result,
+  submissionSaveError,
+}: {
+  activeMode: JudgeRunMode | null
+  error: string | null
+  result: JudgeResult | null
+  submissionSaveError: string | null
+}) {
+  if (activeMode) {
+    return (
+      <Alert
+        type="info"
+        showIcon
+        message={`${judgeModeText[activeMode]}中`}
+        description="QuickJS Worker 正在执行测试用例。"
+      />
+    )
+  }
+
+  if (error) {
+    return (
+      <Alert
+        type="error"
+        showIcon
+        message="判题失败"
+        description={error}
+      />
+    )
+  }
+
+  if (!result) {
+    return <Empty description="运行或提交后会显示判题结果" />
+  }
+
+  return (
+    <Space direction="vertical" size={16} style={{ width: '100%' }}>
+      <Alert
+        type={getResultAlertType(result.status)}
+        showIcon
+        message={
+          <Space wrap>
+            <Typography.Text strong>
+              {judgeModeText[result.mode]}：{judgeStatusText[result.status]}
+            </Typography.Text>
+            <Tag color={judgeStatusColor[result.status]}>
+              {result.passedCount}/{result.totalCount}
+            </Tag>
+          </Space>
+        }
+        description={`总耗时 ${result.durationMs}ms`}
+      />
+
+      {submissionSaveError ? (
+        <Alert
+          type="warning"
+          showIcon
+          message="提交记录保存失败"
+          description={submissionSaveError}
+        />
+      ) : null}
+
+      <List
+        size="small"
+        dataSource={result.cases}
+        renderItem={(caseResult, index) => (
+          <List.Item>
+            <Space direction="vertical" size={8} style={{ width: '100%' }}>
+              <Space wrap>
+                <Typography.Text strong>Case {index + 1}</Typography.Text>
+                <Typography.Text className="muted">
+                  {caseResult.testCaseId}
+                </Typography.Text>
+                <Tag color={judgeCaseStatusColor[caseResult.status]}>
+                  {judgeCaseStatusText[caseResult.status]}
+                </Tag>
+                <Typography.Text className="muted">
+                  {caseResult.durationMs}ms
+                </Typography.Text>
+              </Space>
+
+              {caseResult.error ? (
+                <Alert type="error" message={caseResult.error} />
+              ) : (
+                <Space direction="vertical" size={4}>
+                  <Typography.Text className="judge-value">
+                    Input: <code>{formatValue(caseResult.input)}</code>
+                  </Typography.Text>
+                  <Typography.Text className="judge-value">
+                    Expected: <code>{formatValue(caseResult.expected)}</code>
+                  </Typography.Text>
+                  <Typography.Text className="judge-value">
+                    Actual: <code>{formatValue(caseResult.actual)}</code>
+                  </Typography.Text>
+                </Space>
+              )}
+            </Space>
+          </List.Item>
+        )}
+      />
+    </Space>
   )
 }
