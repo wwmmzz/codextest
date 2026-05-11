@@ -14,6 +14,13 @@ npm run build
 npm run lint
 ```
 
+## Deployment
+
+GitHub Pages deployment is handled by `.github/workflows/deploy-pages.yml`.
+In the repository settings, configure Pages to use GitHub Actions as the source.
+The workflow builds with `VITE_BASE_PATH=/${{ github.event.repository.name }}/`
+so project-site asset paths and React Router basename match the Pages URL.
+
 ## Tech Stack
 
 - Vite + React + TypeScript

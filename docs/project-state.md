@@ -37,10 +37,12 @@ Completed:
 - IndexedDB submission records for submit-mode judge results.
 - Submission history rendering in the problem workspace and global submissions page.
 - Focused Vitest coverage for submission record creation and storage service behavior.
+- GitHub Pages deployment workflow for publishing the current Vite app from `main`.
+- Vite base path and React Router basename support for GitHub Pages project sites.
 
 Not implemented yet:
 
-- GitHub Actions + GitHub Pages based AI static problem updates for daily/weekly featured problems.
+- GitHub Actions based AI static problem updates for daily/weekly featured problems.
 - AI assistant features.
 
 ## Main Decisions
@@ -57,6 +59,8 @@ Not implemented yet:
 
 - `src/App.tsx`: application layout, sidebar navigation, route definitions.
 - `src/main.tsx`: React root, Ant Design config provider, router provider.
+- `vite.config.ts`: Vite config, including deploy-time base path support.
+- `.github/workflows/deploy-pages.yml`: GitHub Pages deployment workflow.
 - `src/pages/ProblemListPage.tsx`: problem table backed by static problem data.
 - `src/pages/ProblemDetailPage.tsx`: problem workspace shell and Monaco code editor.
 - `src/pages/SubmissionsPage.tsx`: placeholder for local submission history.
@@ -120,8 +124,10 @@ All current problems are `Easy` and use JSON-serializable inputs/expected output
 
 ## Next Steps
 
-1. Add GitHub Actions + GitHub Pages based AI static problem updates for daily/weekly featured problems, after the core brushing loop is complete.
-2. Add AI assistant features.
+1. Split static problem data into hand-written base problems plus generated JSON problem data.
+2. Add generated problem schema and validation scripts.
+3. Add GitHub Actions based AI static problem updates for daily/weekly featured problems.
+4. Add AI assistant features.
 
 ## Future Static Problem Automation
 
@@ -131,7 +137,7 @@ After the core brushing loop is complete, add an automated static problem update
 - Have AI generate strict structured JSON instead of directly editing TypeScript source.
 - Validate generated problems before publishing, including schema checks, unique IDs, valid function names, JSON-serializable tests, and reference-solution execution against visible and hidden tests.
 - Prefer opening an automated pull request first; direct commits to `main` can be considered only after the validation pipeline is stable.
-- Publish the Vite app through GitHub Pages after validated problem updates are merged.
+- Publish the Vite app through the existing GitHub Pages workflow after validated problem updates are merged.
 - Expose daily/weekly featured problems in the frontend once generated problem metadata is available.
 
 ## Testing Approach

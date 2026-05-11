@@ -6,6 +6,11 @@ import zhCN from 'antd/locale/zh_CN'
 import './index.css'
 import App from './App.tsx'
 
+const routerBasename =
+  import.meta.env.BASE_URL === '/'
+    ? '/'
+    : import.meta.env.BASE_URL.replace(/\/$/, '')
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <ConfigProvider
@@ -19,7 +24,7 @@ createRoot(document.getElementById('root')!).render(
         },
       }}
     >
-      <BrowserRouter>
+      <BrowserRouter basename={routerBasename}>
         <App />
       </BrowserRouter>
     </ConfigProvider>
