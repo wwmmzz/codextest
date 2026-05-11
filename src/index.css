@@ -95,6 +95,12 @@ a {
   min-height: 240px;
 }
 
+.editor-panel .ant-card-body {
+  padding: 0;
+  overflow: hidden;
+  border-radius: 0 0 8px 8px;
+}
+
 .editor-placeholder {
   display: grid;
   min-height: 360px;

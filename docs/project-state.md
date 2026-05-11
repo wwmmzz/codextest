@@ -21,10 +21,11 @@ Completed:
 - Static problem set with visible and hidden test cases.
 - Problem list reads from `src/data/problems.ts`.
 - Problem detail page renders statement, metadata, examples, constraints, tests, and starter code.
+- Monaco editor integration on the problem detail page.
+- Editable code is kept in local React state while viewing a problem.
 
 Not implemented yet:
 
-- Monaco editor integration.
 - Draft persistence.
 - QuickJS judge worker.
 - Deep comparison and result rendering.
@@ -46,7 +47,7 @@ Not implemented yet:
 - `src/App.tsx`: application layout, sidebar navigation, route definitions.
 - `src/main.tsx`: React root, Ant Design config provider, router provider.
 - `src/pages/ProblemListPage.tsx`: problem table backed by static problem data.
-- `src/pages/ProblemDetailPage.tsx`: problem workspace shell and starter code preview.
+- `src/pages/ProblemDetailPage.tsx`: problem workspace shell and Monaco code editor.
 - `src/pages/SubmissionsPage.tsx`: placeholder for local submission history.
 - `src/types/problem.ts`: problem, example, and test case types.
 - `src/data/problems.ts`: current static problem set and helpers.
@@ -92,20 +93,24 @@ All current problems are `Easy` and use JSON-serializable inputs/expected output
 
 ## Next Steps
 
-1. Replace starter code preview with Monaco Editor.
-2. Keep editable code in local React state.
-3. Add draft persistence per problem.
-4. Add judge request/result types under `src/judge`.
-5. Implement QuickJS Web Worker for one test case.
-6. Extend judge worker to multiple tests and result summaries.
-7. Store submissions in IndexedDB.
+1. Add draft persistence per problem.
+2. Add judge request/result types under `src/judge`.
+3. Implement QuickJS Web Worker for one test case.
+4. Extend judge worker to multiple tests and result summaries.
+5. Store submissions in IndexedDB.
+6. Add AI assistant features.
+
+## Testing Approach
+
+Add focused tests when implementing key logic, especially judge request/result shaping, deep comparison, worker execution behavior, draft persistence, and submission storage. UI-only shell changes can continue to rely on build/lint verification until a test framework is introduced.
 
 ## Verification
 
-Last verified command:
+Last verified commands:
 
 ```bash
 npm run build
+npm run lint
 ```
 
 Result: passed.

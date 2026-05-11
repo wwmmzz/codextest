@@ -1,7 +1,10 @@
 import { ArrowLeftOutlined, PlayCircleOutlined, SendOutlined } from '@ant-design/icons'
+import Editor from '@monaco-editor/react'
 import { Button, Card, Descriptions, Empty, Space, Tabs, Tag, Typography } from 'antd'
+import { useState } from 'react'
 import { Link, Navigate, useParams } from 'react-router-dom'
 import { difficultyColor, getProblemById } from '../data/problems'
+import type { Problem } from '../types/problem'
 
 function formatValue(value: unknown) {
   return JSON.stringify(value)
@@ -15,7 +18,12 @@ export default function ProblemDetailPage() {
     return <Navigate to="/problems" replace />
   }
 
+  return <ProblemWorkspace key={problem.id} problem={problem} />
+}
+
+function ProblemWorkspace({ problem }: { problem: Problem }) {
   const allTests = [...problem.visibleTests, ...problem.hiddenTests]
+  const [code, setCode] = useState(problem.starterCode)
 
   return (
     <div className="page">
@@ -150,8 +158,25 @@ export default function ProblemDetailPage() {
         </Card>
 
         <Space direction="vertical" size={16}>
-          <Card title="代码编辑器" className="panel">
-            <pre className="code-preview">{problem.starterCode}</pre>
+          <Card title="代码编辑器" className="panel editor-panel">
+            <Editor
+              height="420px"
+              defaultLanguage="javascript"
+              language="javascript"
+              theme="vs-dark"
+              value={code}
+              onChange={(value) => setCode(value ?? '')}
+              loading="正在加载编辑器..."
+              options={{
+                minimap: { enabled: false },
+                fontSize: 14,
+                fontFamily: '"Cascadia Code", Consolas, monospace',
+                lineNumbersMinChars: 3,
+                scrollBeyondLastLine: false,
+                automaticLayout: true,
+                tabSize: 2,
+              }}
+            />
           </Card>
           <Card title="运行结果" className="panel">
             <Typography.Text className="muted">
