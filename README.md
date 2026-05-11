@@ -6,6 +6,10 @@ A pure frontend LeetCode-like practice platform. The current phase focuses on a 
 
 Read [docs/project-state.md](docs/project-state.md) first when returning to this project. It records the current phase, architecture decisions, important files, and next implementation steps.
 
+## Planning Reference
+
+Read [docs/next-phase-directions.md](docs/next-phase-directions.md) for next-phase product directions, UI improvement ideas, and the saved UI concept reference.
+
 ## Scripts
 
 ```bash
