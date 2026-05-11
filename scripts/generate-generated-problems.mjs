@@ -296,6 +296,8 @@ async function main() {
     })),
   });
 
+  // Keep Chat Completions for now because it is the broadest compatibility target
+  // across OpenAI-compatible providers; migrate only when the downstream parser is updated too.
   const response = await client.chat.completions.create({
     model,
     messages: [
