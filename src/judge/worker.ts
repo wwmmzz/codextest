@@ -1,5 +1,5 @@
 import { executeQuickJsTestCase } from './executor'
-import { runFirstTestCase } from './runner'
+import { runJudgeRequest } from './runner'
 import type { JudgeWorkerMessage, JudgeWorkerResponse } from './types'
 
 type JudgeWorkerScope = {
@@ -16,7 +16,7 @@ worker.onmessage = (event: MessageEvent<JudgeWorkerMessage>) => {
     return
   }
 
-  void runFirstTestCase(message.request, executeQuickJsTestCase)
+  void runJudgeRequest(message.request, executeQuickJsTestCase)
     .then((result) => {
       worker.postMessage({
         type: 'judge-result',

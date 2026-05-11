@@ -27,14 +27,16 @@ Completed:
 - Focused Vitest coverage for draft service behavior.
 - Judge request/result types under `src/judge`.
 - Deep comparison helper with focused Vitest coverage.
-- QuickJS Web Worker foundation for executing the first test case in a request.
-- Focused Vitest coverage for single-case QuickJS execution and result summarization.
+- QuickJS Web Worker foundation for executing judge requests.
+- Focused Vitest coverage for QuickJS execution and result summarization.
+- Multi-test judge execution and summaries.
+- Focused Vitest coverage for multi-case judge result summarization.
 
 Not implemented yet:
 
-- Multi-test judge execution and summaries.
 - Judge result rendering.
 - IndexedDB submission records.
+- GitHub Actions + GitHub Pages based AI static problem updates for daily/weekly featured problems.
 - AI assistant features.
 
 ## Main Decisions
@@ -64,7 +66,7 @@ Not implemented yet:
 - `src/judge/types.ts`: judge request, response, test case, and result types.
 - `src/judge/compare.ts`: deep comparison helper for actual and expected results.
 - `src/judge/executor.ts`: QuickJS-backed single test case execution.
-- `src/judge/runner.ts`: first-test-case judge result summarization.
+- `src/judge/runner.ts`: multi-test judge execution and result summarization.
 - `src/judge/worker.ts`: Web Worker message handler for judge requests.
 - `src/judge/client.ts`: browser helper for creating and messaging the judge worker.
 - `src/index.css`: application layout and page-level styles.
@@ -109,10 +111,21 @@ All current problems are `Easy` and use JSON-serializable inputs/expected output
 
 ## Next Steps
 
-1. Extend judge worker to multiple tests and result summaries.
-2. Render judge results in the problem workspace.
-3. Store submissions in IndexedDB.
+1. Render judge results in the problem workspace.
+2. Store submissions in IndexedDB.
+3. Add GitHub Actions + GitHub Pages based AI static problem updates for daily/weekly featured problems, after the core brushing loop is complete.
 4. Add AI assistant features.
+
+## Future Static Problem Automation
+
+After the core brushing loop is complete, add an automated static problem update pipeline:
+
+- Use GitHub Actions scheduled workflows plus manual `workflow_dispatch` to generate daily or weekly candidate problems.
+- Have AI generate strict structured JSON instead of directly editing TypeScript source.
+- Validate generated problems before publishing, including schema checks, unique IDs, valid function names, JSON-serializable tests, and reference-solution execution against visible and hidden tests.
+- Prefer opening an automated pull request first; direct commits to `main` can be considered only after the validation pipeline is stable.
+- Publish the Vite app through GitHub Pages after validated problem updates are merged.
+- Expose daily/weekly featured problems in the frontend once generated problem metadata is available.
 
 ## Testing Approach
 
