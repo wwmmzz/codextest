@@ -139,6 +139,14 @@ All current problems are `Easy` and use JSON-serializable inputs/expected output
 1. Add GitHub Actions based AI static problem updates for daily/weekly featured problems.
 2. Add AI assistant features.
 
+## Planned Improvements
+
+- Make the problem list a real browsing entry point with difficulty/status filters and better sorting.
+- Improve the problem workspace with editor utilities like reset, format, and clearer draft state feedback.
+- Add page-level tests for the problem detail workspace and submission history drawer interactions.
+- Surface daily/weekly featured problem metadata in the frontend once generation metadata is available.
+- Add runtime fallbacks and clearer error states for IndexedDB, QuickJS worker startup, and corrupted data.
+
 ## Future Static Problem Automation
 
 After the core brushing loop is complete, add an automated static problem update pipeline:
