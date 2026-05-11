@@ -16,6 +16,10 @@ import { Link } from 'react-router-dom'
 import type { ColumnsType } from 'antd/es/table'
 import type { JudgeCaseStatus, JudgeResultStatus } from '../judge'
 import type { SubmissionRecord } from '../types/submission'
+import {
+  formatSubmittedAt,
+  formatSubmissionValue,
+} from './submissionHistoryHelpers'
 
 const submissionStatusText: Record<JudgeResultStatus, string> = {
   accepted: '通过',
@@ -45,14 +49,6 @@ const caseStatusColor: Record<JudgeCaseStatus, string> = {
   failed: 'error',
   'runtime-error': 'error',
   'time-limit-exceeded': 'warning',
-}
-
-function formatSubmittedAt(submittedAt: number) {
-  return new Date(submittedAt).toLocaleString()
-}
-
-function formatValue(value: unknown) {
-  return JSON.stringify(value) ?? String(value)
 }
 
 export function SubmissionHistory({
@@ -248,13 +244,13 @@ function SubmissionDetail({ submission }: { submission: SubmissionRecord }) {
                 ) : (
                   <Space direction="vertical" size={4}>
                     <Typography.Text className="judge-value">
-                      Input: <code>{formatValue(caseResult.input)}</code>
+                      Input: <code>{formatSubmissionValue(caseResult.input)}</code>
                     </Typography.Text>
                     <Typography.Text className="judge-value">
-                      Expected: <code>{formatValue(caseResult.expected)}</code>
+                      Expected: <code>{formatSubmissionValue(caseResult.expected)}</code>
                     </Typography.Text>
                     <Typography.Text className="judge-value">
-                      Actual: <code>{formatValue(caseResult.actual)}</code>
+                      Actual: <code>{formatSubmissionValue(caseResult.actual)}</code>
                     </Typography.Text>
                   </Space>
                 )}

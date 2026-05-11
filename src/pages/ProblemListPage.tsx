@@ -1,14 +1,16 @@
 import { Button, Card, Input, Space, Table, Tag, Typography } from 'antd'
 import type { TableProps } from 'antd'
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { difficultyColor, problems } from '../data/problems'
-import type { Problem, ProblemStatus } from '../types/problem'
+import { useSubmissions } from '../hooks/useSubmissions'
+import type { Problem } from '../types/problem'
+import {
+  buildProblemRows,
+  type ProblemListRow,
+} from './problemListHelpers'
 
-type ProblemRow = Problem & {
-  status: ProblemStatus
-}
-
-const columns: TableProps<ProblemRow>['columns'] = [
+const columns: TableProps<ProblemListRow>['columns'] = [
   {
     title: '题目',
     dataIndex: 'title',
@@ -57,10 +59,9 @@ const columns: TableProps<ProblemRow>['columns'] = [
 ]
 
 export default function ProblemListPage() {
-  const rows: ProblemRow[] = problems.map((problem) => ({
-    ...problem,
-    status: '未开始',
-  }))
+  const { submissions } = useSubmissions()
+  const [query, setQuery] = useState('')
+  const rows: ProblemListRow[] = buildProblemRows(problems, submissions, query)
 
   return (
     <div className="page">
@@ -76,6 +77,8 @@ export default function ProblemListPage() {
         <Input.Search
           allowClear
           placeholder="搜索题目"
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
           style={{ maxWidth: 280 }}
         />
       </div>
@@ -86,6 +89,9 @@ export default function ProblemListPage() {
           columns={columns}
           dataSource={rows}
           pagination={false}
+          locale={{
+            emptyText: query ? '没有找到匹配的题目' : '暂无题目',
+          }}
         />
       </Card>
     </div>

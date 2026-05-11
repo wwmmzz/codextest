@@ -15,7 +15,7 @@ import {
   readJsonArray,
   validateGeneratedProblemList,
 } from "./problemValidation.mjs";
-import { log } from "node:console";
+import { resolveGenerationConfig } from "./generate-generated-problems.shared.mjs";
 
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 const rootDir = path.resolve(scriptDir, "..");
@@ -44,62 +44,6 @@ const generatedProblemBundleSchema = {
     },
   },
 };
-
-function parseArgs(argv) {
-  const args = {
-    apiKey: undefined,
-    baseUrl: undefined,
-    model: undefined,
-    cadence: undefined,
-    difficulty: undefined,
-    output: generatedProblemsPath,
-  };
-
-  for (let index = 0; index < argv.length; index += 1) {
-    const current = argv[index];
-
-    if (current === "--api-key") {
-      args.apiKey = argv[++index];
-      continue;
-    }
-
-    if (current === "--base-url") {
-      args.baseUrl = argv[++index];
-      continue;
-    }
-
-    if (current === "--model") {
-      args.model = argv[++index];
-      continue;
-    }
-
-    if (current === "--cadence") {
-      args.cadence = argv[++index];
-      continue;
-    }
-
-    if (current === "--difficulty") {
-      args.difficulty = argv[++index];
-      continue;
-    }
-
-    if (current === "--output") {
-      args.output = argv[++index] ?? generatedProblemsPath;
-    }
-  }
-
-  return args;
-}
-
-function resolveCredential(...candidates) {
-  for (const candidate of candidates) {
-    if (typeof candidate === "string" && candidate.trim()) {
-      return candidate.trim();
-    }
-  }
-
-  return undefined;
-}
 
 function isTimeLimitError(error) {
   return (
@@ -235,38 +179,15 @@ async function validateReferenceSolution(problem, referenceSolution) {
 }
 
 async function main() {
-  const args = parseArgs(process.argv.slice(2));
-  const apiKey = resolveCredential(
-    args.apiKey,
-    process.env.OPENAI_API_KEY,
-    process.env.AI_API_KEY,
-    process.env.API_KEY,
-  );
-  const baseUrl = resolveCredential(
-    args.baseUrl,
-    process.env.OPENAI_BASE_URL,
-    process.env.AI_BASE_URL,
-    process.env.API_BASE_URL,
-  );
-  const model =
-    resolveCredential(
-      args.model,
-      process.env.OPENAI_MODEL,
-      process.env.AI_MODEL,
-      process.env.MODEL,
-    ) ?? "gpt-5.5";
-  const cadence =
-    resolveCredential(
-      args.cadence,
-      process.env.AI_CADENCE,
-      process.env.CADENCE,
-    ) ?? "daily";
-  const difficulty =
-    resolveCredential(
-      args.difficulty,
-      process.env.AI_DIFFICULTY,
-      process.env.DIFFICULTY,
-    ) ?? "Easy";
+  const { args, apiKey, baseUrl, model, cadence, difficulty } =
+    resolveGenerationConfig({
+      argv: process.argv.slice(2),
+      env: process.env,
+      defaults: {
+        output: generatedProblemsPath,
+      },
+    });
+  const outputPath = args.output ?? generatedProblemsPath;
 
   if (!apiKey) {
     throw new Error(
@@ -281,7 +202,7 @@ async function main() {
 
   const [baseProblemSummaries, generatedProblems] = await Promise.all([
     readBaseProblemSummaries(baseProblemsPath),
-    readJsonArray(generatedProblemsPath),
+    readJsonArray(outputPath),
   ]);
 
   const prompt = buildProblemPrompt({
@@ -340,14 +261,14 @@ async function main() {
     baseProblemSummaries.map((problem) => problem.id),
   );
 
-  await fs.mkdir(path.dirname(generatedProblemsPath), { recursive: true });
+  await fs.mkdir(path.dirname(outputPath), { recursive: true });
   await fs.writeFile(
-    generatedProblemsPath,
+    outputPath,
     `${JSON.stringify(nextGeneratedProblems, null, 2)}\n`,
   );
 
   console.log(
-    `Generated ${bundle.problem.id} with model ${model} and updated ${generatedProblemsPath}.`,
+    `Generated ${bundle.problem.id} with model ${model} and updated ${outputPath}.`,
   );
 }
 
