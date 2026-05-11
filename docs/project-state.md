@@ -23,12 +23,15 @@ Completed:
 - Problem detail page renders statement, metadata, examples, constraints, tests, and starter code.
 - Monaco editor integration on the problem detail page.
 - Editable code is kept in local React state while viewing a problem.
+- Draft persistence per problem through Dexie and IndexedDB.
+- Focused Vitest coverage for draft service behavior.
+- Judge request/result types under `src/judge`.
+- Deep comparison helper with focused Vitest coverage.
 
 Not implemented yet:
 
-- Draft persistence.
 - QuickJS judge worker.
-- Deep comparison and result rendering.
+- Judge result rendering.
 - IndexedDB submission records.
 - AI assistant features.
 
@@ -50,7 +53,14 @@ Not implemented yet:
 - `src/pages/ProblemDetailPage.tsx`: problem workspace shell and Monaco code editor.
 - `src/pages/SubmissionsPage.tsx`: placeholder for local submission history.
 - `src/types/problem.ts`: problem, example, and test case types.
+- `src/types/draft.ts`: local code draft type.
 - `src/data/problems.ts`: current static problem set and helpers.
+- `src/db/appDb.ts`: Dexie database definition.
+- `src/db/draftStorage.ts`: IndexedDB-backed draft storage adapter.
+- `src/services/drafts.ts`: testable draft load/save helpers.
+- `src/hooks/useProblemDraft.ts`: problem editor draft loading and autosave hook.
+- `src/judge/types.ts`: judge request, response, test case, and result types.
+- `src/judge/compare.ts`: deep comparison helper for actual and expected results.
 - `src/index.css`: application layout and page-level styles.
 
 ## Current Problem Model
@@ -93,16 +103,15 @@ All current problems are `Easy` and use JSON-serializable inputs/expected output
 
 ## Next Steps
 
-1. Add draft persistence per problem.
-2. Add judge request/result types under `src/judge`.
-3. Implement QuickJS Web Worker for one test case.
-4. Extend judge worker to multiple tests and result summaries.
-5. Store submissions in IndexedDB.
-6. Add AI assistant features.
+1. Implement QuickJS Web Worker for one test case.
+2. Extend judge worker to multiple tests and result summaries.
+3. Render judge results in the problem workspace.
+4. Store submissions in IndexedDB.
+5. Add AI assistant features.
 
 ## Testing Approach
 
-Add focused tests when implementing key logic, especially judge request/result shaping, deep comparison, worker execution behavior, draft persistence, and submission storage. UI-only shell changes can continue to rely on build/lint verification until a test framework is introduced.
+Use Vitest for focused tests around key logic, especially judge request/result shaping, deep comparison, worker execution behavior, draft persistence, and submission storage. Dexie-backed browser adapters can be kept thin and verified through build/lint plus browser checks unless schema or migration behavior becomes complex enough to justify IndexedDB integration tests.
 
 ## Verification
 
@@ -111,6 +120,7 @@ Last verified commands:
 ```bash
 npm run build
 npm run lint
+npm run test
 ```
 
 Result: passed.

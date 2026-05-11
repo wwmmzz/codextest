@@ -1,13 +1,21 @@
 import { ArrowLeftOutlined, PlayCircleOutlined, SendOutlined } from '@ant-design/icons'
 import Editor from '@monaco-editor/react'
 import { Button, Card, Descriptions, Empty, Space, Tabs, Tag, Typography } from 'antd'
-import { useState } from 'react'
 import { Link, Navigate, useParams } from 'react-router-dom'
 import { difficultyColor, getProblemById } from '../data/problems'
+import { useProblemDraft, type DraftSaveStatus } from '../hooks/useProblemDraft'
 import type { Problem } from '../types/problem'
 
 function formatValue(value: unknown) {
   return JSON.stringify(value)
+}
+
+const draftStatusText: Record<DraftSaveStatus, string> = {
+  loading: '加载草稿中',
+  idle: '草稿已加载',
+  saving: '保存中',
+  saved: '草稿已保存',
+  error: '草稿保存失败',
 }
 
 export default function ProblemDetailPage() {
@@ -23,7 +31,10 @@ export default function ProblemDetailPage() {
 
 function ProblemWorkspace({ problem }: { problem: Problem }) {
   const allTests = [...problem.visibleTests, ...problem.hiddenTests]
-  const [code, setCode] = useState(problem.starterCode)
+  const { code, setCode, status } = useProblemDraft(
+    problem.id,
+    problem.starterCode,
+  )
 
   return (
     <div className="page">
@@ -158,7 +169,15 @@ function ProblemWorkspace({ problem }: { problem: Problem }) {
         </Card>
 
         <Space direction="vertical" size={16}>
-          <Card title="代码编辑器" className="panel editor-panel">
+          <Card
+            title="代码编辑器"
+            className="panel editor-panel"
+            extra={
+              <Typography.Text className="muted">
+                {draftStatusText[status]}
+              </Typography.Text>
+            }
+          >
             <Editor
               height="420px"
               defaultLanguage="javascript"
