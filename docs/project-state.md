@@ -27,10 +27,12 @@ Completed:
 - Focused Vitest coverage for draft service behavior.
 - Judge request/result types under `src/judge`.
 - Deep comparison helper with focused Vitest coverage.
+- QuickJS Web Worker foundation for executing the first test case in a request.
+- Focused Vitest coverage for single-case QuickJS execution and result summarization.
 
 Not implemented yet:
 
-- QuickJS judge worker.
+- Multi-test judge execution and summaries.
 - Judge result rendering.
 - IndexedDB submission records.
 - AI assistant features.
@@ -61,6 +63,10 @@ Not implemented yet:
 - `src/hooks/useProblemDraft.ts`: problem editor draft loading and autosave hook.
 - `src/judge/types.ts`: judge request, response, test case, and result types.
 - `src/judge/compare.ts`: deep comparison helper for actual and expected results.
+- `src/judge/executor.ts`: QuickJS-backed single test case execution.
+- `src/judge/runner.ts`: first-test-case judge result summarization.
+- `src/judge/worker.ts`: Web Worker message handler for judge requests.
+- `src/judge/client.ts`: browser helper for creating and messaging the judge worker.
 - `src/index.css`: application layout and page-level styles.
 
 ## Current Problem Model
@@ -103,11 +109,10 @@ All current problems are `Easy` and use JSON-serializable inputs/expected output
 
 ## Next Steps
 
-1. Implement QuickJS Web Worker for one test case.
-2. Extend judge worker to multiple tests and result summaries.
-3. Render judge results in the problem workspace.
-4. Store submissions in IndexedDB.
-5. Add AI assistant features.
+1. Extend judge worker to multiple tests and result summaries.
+2. Render judge results in the problem workspace.
+3. Store submissions in IndexedDB.
+4. Add AI assistant features.
 
 ## Testing Approach
 
