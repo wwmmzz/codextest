@@ -39,10 +39,15 @@ Completed:
 - Focused Vitest coverage for submission record creation and storage service behavior.
 - GitHub Pages deployment workflow for publishing the current Vite app from `main`.
 - Vite base path and React Router basename support for GitHub Pages project sites.
+- Static problem data split into hand-written base problems plus generated JSON problem data.
+- Generated problem validation script and `npm run validate:problems` guardrail.
+- OpenAI-backed generated problem CLI with configurable API key, base URL, and model.
+- Reference-solution validation for generated problem candidates before writing JSON.
+- GitHub Actions scheduled workflow for generating featured problems and opening PRs.
+- GitHub Actions based AI static problem updates for daily/weekly featured problems.
 
 Not implemented yet:
 
-- GitHub Actions based AI static problem updates for daily/weekly featured problems.
 - AI assistant features.
 
 ## Main Decisions
@@ -61,12 +66,19 @@ Not implemented yet:
 - `src/main.tsx`: React root, Ant Design config provider, router provider.
 - `vite.config.ts`: Vite config, including deploy-time base path support.
 - `.github/workflows/deploy-pages.yml`: GitHub Pages deployment workflow.
+- `.github/workflows/generate-featured-problem.yml`: scheduled featured problem generation workflow.
 - `src/pages/ProblemListPage.tsx`: problem table backed by static problem data.
 - `src/pages/ProblemDetailPage.tsx`: problem workspace shell and Monaco code editor.
 - `src/pages/SubmissionsPage.tsx`: placeholder for local submission history.
 - `src/types/problem.ts`: problem, example, and test case types.
 - `src/types/draft.ts`: local code draft type.
 - `src/data/problems.ts`: current static problem set and helpers.
+- `src/data/baseProblems.ts`: hand-written baseline problem set.
+- `src/data/generated/problems.generated.json`: generated problem data placeholder.
+- `scripts/problemValidation.mjs`: shared generated problem validation helpers.
+- `scripts/problemGeneration.mjs`: generated problem prompt, parsing, and merge helpers.
+- `scripts/validate-generated-problems.mjs`: CLI guardrail for generated problem JSON.
+- `scripts/generate-generated-problems.mjs`: OpenAI-backed generated problem CLI.
 - `src/db/appDb.ts`: Dexie database definition.
 - `src/db/draftStorage.ts`: IndexedDB-backed draft storage adapter.
 - `src/db/submissionStorage.ts`: IndexedDB-backed submission storage adapter.
@@ -124,10 +136,8 @@ All current problems are `Easy` and use JSON-serializable inputs/expected output
 
 ## Next Steps
 
-1. Split static problem data into hand-written base problems plus generated JSON problem data.
-2. Add generated problem schema and validation scripts.
-3. Add GitHub Actions based AI static problem updates for daily/weekly featured problems.
-4. Add AI assistant features.
+1. Add GitHub Actions based AI static problem updates for daily/weekly featured problems.
+2. Add AI assistant features.
 
 ## Future Static Problem Automation
 

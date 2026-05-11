@@ -1,0 +1,355 @@
+import fs from "node:fs/promises";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+import OpenAI from "openai";
+import { getQuickJS, shouldInterruptAfterDeadline } from "quickjs-emscripten";
+import {
+  buildProblemPrompt,
+  problemSchema,
+  mergeGeneratedProblems,
+  parseGeneratedProblemBundle,
+  validateCandidateProblem,
+} from "./problemGeneration.mjs";
+import {
+  readBaseProblemSummaries,
+  readJsonArray,
+  validateGeneratedProblemList,
+} from "./problemValidation.mjs";
+import { log } from "node:console";
+
+const scriptDir = path.dirname(fileURLToPath(import.meta.url));
+const rootDir = path.resolve(scriptDir, "..");
+const baseProblemsPath = path.join(rootDir, "src", "data", "baseProblems.ts");
+const generatedProblemsPath = path.join(
+  rootDir,
+  "src",
+  "data",
+  "generated",
+  "problems.generated.json",
+);
+
+const generatedProblemBundleSchema = {
+  type: "object",
+  additionalProperties: false,
+  required: ["problem", "referenceSolution"],
+  properties: {
+    problem: {
+      ...problemSchema,
+      description: "Public problem data to append to the static problem list.",
+    },
+    referenceSolution: {
+      type: "string",
+      minLength: 1,
+      description: "Reference solution used only during validation.",
+    },
+  },
+};
+
+function parseArgs(argv) {
+  const args = {
+    apiKey: undefined,
+    baseUrl: undefined,
+    model: undefined,
+    cadence: undefined,
+    difficulty: undefined,
+    output: generatedProblemsPath,
+  };
+
+  for (let index = 0; index < argv.length; index += 1) {
+    const current = argv[index];
+
+    if (current === "--api-key") {
+      args.apiKey = argv[++index];
+      continue;
+    }
+
+    if (current === "--base-url") {
+      args.baseUrl = argv[++index];
+      continue;
+    }
+
+    if (current === "--model") {
+      args.model = argv[++index];
+      continue;
+    }
+
+    if (current === "--cadence") {
+      args.cadence = argv[++index];
+      continue;
+    }
+
+    if (current === "--difficulty") {
+      args.difficulty = argv[++index];
+      continue;
+    }
+
+    if (current === "--output") {
+      args.output = argv[++index] ?? generatedProblemsPath;
+    }
+  }
+
+  return args;
+}
+
+function resolveCredential(...candidates) {
+  for (const candidate of candidates) {
+    if (typeof candidate === "string" && candidate.trim()) {
+      return candidate.trim();
+    }
+  }
+
+  return undefined;
+}
+
+function isTimeLimitError(error) {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "name" in error &&
+    "message" in error &&
+    typeof error.name === "string" &&
+    typeof error.message === "string" &&
+    error.name === "InternalError" &&
+    error.message.toLowerCase().includes("interrupted")
+  );
+}
+
+function formatError(error) {
+  if (error instanceof Error) {
+    return error.message;
+  }
+
+  if (
+    typeof error === "object" &&
+    error !== null &&
+    "message" in error &&
+    typeof error.message === "string"
+  ) {
+    return error.message;
+  }
+
+  if (typeof error === "string") {
+    return error;
+  }
+
+  return "Unknown execution error";
+}
+
+function deepEqualJson(left, right) {
+  if (Object.is(left, right)) {
+    return true;
+  }
+
+  if (
+    typeof left !== "object" ||
+    left === null ||
+    typeof right !== "object" ||
+    right === null
+  ) {
+    return false;
+  }
+
+  if (Array.isArray(left) || Array.isArray(right)) {
+    if (!Array.isArray(left) || !Array.isArray(right)) {
+      return false;
+    }
+
+    if (left.length !== right.length) {
+      return false;
+    }
+
+    return left.every((item, index) => deepEqualJson(item, right[index]));
+  }
+
+  const leftKeys = Object.keys(left);
+  const rightKeys = Object.keys(right);
+
+  if (leftKeys.length !== rightKeys.length) {
+    return false;
+  }
+
+  return leftKeys.every(
+    (key) => Object.hasOwn(right, key) && deepEqualJson(left[key], right[key]),
+  );
+}
+
+function buildSingleCaseScript(code, functionName, input) {
+  if (!/^[A-Za-z_$][\w$]*$/.test(functionName)) {
+    throw new Error(`Invalid function name: ${functionName}`);
+  }
+
+  const serializedInput = JSON.stringify(input);
+
+  return `
+${code}
+
+const __judgeInput = JSON.parse(${JSON.stringify(serializedInput)});
+const __judgeTarget = ${functionName};
+
+if (typeof __judgeTarget !== "function") {
+  throw new TypeError("Expected ${functionName} to be a function");
+}
+
+__judgeTarget(...__judgeInput);
+`;
+}
+
+async function validateReferenceSolution(problem, referenceSolution) {
+  const quickJs = await getQuickJS();
+  const tests = [...problem.visibleTests, ...problem.hiddenTests];
+
+  for (const testCase of tests) {
+    const startedAt = performance.now();
+
+    try {
+      const actual = quickJs.evalCode(
+        buildSingleCaseScript(
+          referenceSolution,
+          problem.functionName,
+          testCase.input,
+        ),
+        {
+          memoryLimitBytes: problem.memoryLimitBytes,
+          shouldInterrupt: shouldInterruptAfterDeadline(
+            Date.now() + problem.timeLimitMs,
+          ),
+        },
+      );
+
+      if (!deepEqualJson(actual, testCase.expected)) {
+        throw new Error(
+          `expected ${JSON.stringify(testCase.expected)}, got ${JSON.stringify(actual)}`,
+        );
+      }
+    } catch (error) {
+      const durationMs = Math.round(performance.now() - startedAt);
+      const message = isTimeLimitError(error)
+        ? `time limit exceeded after ${durationMs}ms`
+        : formatError(error);
+
+      throw new Error(
+        `Reference solution failed for ${problem.id} / ${testCase.id}: ${message}`,
+      );
+    }
+  }
+}
+
+async function main() {
+  const args = parseArgs(process.argv.slice(2));
+  const apiKey = resolveCredential(
+    args.apiKey,
+    process.env.OPENAI_API_KEY,
+    process.env.AI_API_KEY,
+    process.env.API_KEY,
+  );
+  const baseUrl = resolveCredential(
+    args.baseUrl,
+    process.env.OPENAI_BASE_URL,
+    process.env.AI_BASE_URL,
+    process.env.API_BASE_URL,
+  );
+  const model =
+    resolveCredential(
+      args.model,
+      process.env.OPENAI_MODEL,
+      process.env.AI_MODEL,
+      process.env.MODEL,
+    ) ?? "gpt-5.5";
+  const cadence =
+    resolveCredential(
+      args.cadence,
+      process.env.AI_CADENCE,
+      process.env.CADENCE,
+    ) ?? "daily";
+  const difficulty =
+    resolveCredential(
+      args.difficulty,
+      process.env.AI_DIFFICULTY,
+      process.env.DIFFICULTY,
+    ) ?? "Easy";
+
+  if (!apiKey) {
+    throw new Error(
+      "Missing API key. Set OPENAI_API_KEY, AI_API_KEY, or pass --api-key.",
+    );
+  }
+
+  const client = new OpenAI({
+    apiKey,
+    ...(baseUrl ? { baseURL: baseUrl } : {}),
+  });
+
+  const [baseProblemSummaries, generatedProblems] = await Promise.all([
+    readBaseProblemSummaries(baseProblemsPath),
+    readJsonArray(generatedProblemsPath),
+  ]);
+
+  const prompt = buildProblemPrompt({
+    cadence,
+    difficulty,
+    baseProblemSummaries,
+    generatedProblemSummaries: generatedProblems.map((problem) => ({
+      id: problem.id,
+      title: problem.title,
+      difficulty: problem.difficulty,
+      functionName: problem.functionName,
+    })),
+  });
+
+  const response = await client.chat.completions.create({
+    model,
+    messages: [
+      {
+        role: "system",
+        content:
+          "You generate one high-quality browser-friendly coding problem and one reference solution.",
+      },
+      {
+        role: "user",
+        content: prompt,
+      },
+    ],
+    response_format: {
+      type: "json_schema",
+      json_schema: {
+        name: "generated_problem_bundle",
+        strict: true,
+        schema: generatedProblemBundleSchema,
+      },
+    },
+  });
+
+  const bundle = parseGeneratedProblemBundle(response.choices[0].message.content);
+
+  validateCandidateProblem(bundle.problem, [
+    ...baseProblemSummaries.map((problem) => problem.id),
+    ...generatedProblems.map((problem) => problem.id),
+  ]);
+
+  await validateReferenceSolution(bundle.problem, bundle.referenceSolution);
+
+  const nextGeneratedProblems = mergeGeneratedProblems(
+    generatedProblems,
+    bundle.problem,
+  );
+
+  validateGeneratedProblemList(
+    nextGeneratedProblems,
+    baseProblemSummaries.map((problem) => problem.id),
+  );
+
+  await fs.mkdir(path.dirname(generatedProblemsPath), { recursive: true });
+  await fs.writeFile(
+    generatedProblemsPath,
+    `${JSON.stringify(nextGeneratedProblems, null, 2)}\n`,
+  );
+
+  console.log(
+    `Generated ${bundle.problem.id} with model ${model} and updated ${generatedProblemsPath}.`,
+  );
+}
+
+main().catch((error) => {
+  console.error(error instanceof Error ? error.message : String(error));
+  process.exitCode = 1;
+});

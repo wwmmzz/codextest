@@ -1,0 +1,94 @@
+name: Generate Featured Problem
+
+on:
+  schedule:
+    - cron: '0 2 * * *'
+    - cron: '0 2 * * 1'
+  workflow_dispatch:
+    inputs:
+      cadence:
+        description: 'Generation cadence'
+        required: false
+        default: 'weekly'
+        type: choice
+        options:
+          - daily
+          - weekly
+      difficulty:
+        description: 'Target difficulty'
+        required: false
+        default: 'Easy'
+        type: choice
+        options:
+          - Easy
+          - Medium
+          - Hard
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: featured-problem-generation
+  cancel-in-progress: false
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Set generation env
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "AI_CADENCE=${{ github.event.inputs.cadence }}" >> "$GITHUB_ENV"
+            echo "AI_DIFFICULTY=${{ github.event.inputs.difficulty }}" >> "$GITHUB_ENV"
+          elif [ "${{ github.event.schedule }}" = "0 2 * * 1" ]; then
+            echo "AI_CADENCE=weekly" >> "$GITHUB_ENV"
+            echo "AI_DIFFICULTY=Easy" >> "$GITHUB_ENV"
+          else
+            echo "AI_CADENCE=daily" >> "$GITHUB_ENV"
+            echo "AI_DIFFICULTY=Easy" >> "$GITHUB_ENV"
+          fi
+
+      - name: Generate problem
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY || secrets.AI_API_KEY || secrets.API_KEY }}
+          OPENAI_BASE_URL: ${{ secrets.OPENAI_BASE_URL || secrets.AI_BASE_URL || secrets.API_BASE_URL }}
+          OPENAI_MODEL: ${{ secrets.OPENAI_MODEL || secrets.AI_MODEL || secrets.MODEL }}
+        run: npm run generate:problem -- --api-key "${{ secrets.OPENAI_API_KEY || secrets.AI_API_KEY || secrets.API_KEY }}"
+
+      - name: Validate generated problems
+        run: npm run validate:problems
+
+      - name: Run tests
+        run: npm run test
+
+      - name: Run lint
+        run: npm run lint
+
+      - name: Create pull request
+        uses: peter-evans/create-pull-request@v7
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: 'Add generated featured problem'
+          title: 'Add generated featured problem'
+          body: |
+            Automated problem generation run from GitHub Actions.
+
+            This PR was created after generation, validation, lint, and tests passed.
+          branch: automation/generated-featured-problem
+          delete-branch: true
+          labels: automation, featured-problem

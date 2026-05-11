@@ -39,6 +39,9 @@ jobs:
       - name: Run lint
         run: npm run lint
 
+      - name: Validate generated problems
+        run: npm run validate:problems
+
       - name: Build
         run: npm run build
         env:

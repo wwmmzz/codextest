@@ -1,0 +1,112 @@
+[
+  {
+    "id": "count-matches",
+    "title": "Count Matches",
+    "difficulty": "Easy",
+    "tags": [
+      "Array",
+      "String"
+    ],
+    "statement": "Given an array of strings `items` and a string `ruleKey` and a string `ruleValue`, return the number of items that match the rule. Each item is represented as \"type color name\" (exactly three words separated by single spaces). The ruleKey can be \"type\", \"color\", or \"name\", and you should return the count of items whose corresponding part equals ruleValue.",
+    "examples": [
+      {
+        "input": "[\"phone blue pixel\", \"computer silver lenovo\", \"phone gold iphone\"], \"type\", \"phone\"",
+        "output": "2",
+        "explanation": "The first and third items have type \"phone\"."
+      }
+    ],
+    "constraints": [
+      "1 <= items.length <= 10^4",
+      "1 <= items[i].length <= 100",
+      "ruleKey is one of \"type\", \"color\", or \"name\".",
+      "All strings consist of lowercase English letters only."
+    ],
+    "starterCode": "function countMatches(items, ruleKey, ruleValue) {\n  // Your code here\n}",
+    "functionName": "countMatches",
+    "timeLimitMs": 4000,
+    "memoryLimitBytes": 67108864,
+    "visibleTests": [
+      {
+        "id": "visible-1",
+        "input": [
+          [
+            "phone blue pixel",
+            "computer silver lenovo",
+            "phone gold iphone"
+          ],
+          "type",
+          "phone"
+        ],
+        "expected": 2,
+        "visibility": "visible"
+      }
+    ],
+    "hiddenTests": [
+      {
+        "id": "hidden-1",
+        "input": [
+          [
+            "ball red adidas",
+            "ball blue nike",
+            "shoe black adidas"
+          ],
+          "color",
+          "blue"
+        ],
+        "expected": 1,
+        "visibility": "hidden"
+      }
+    ]
+  },
+  {
+    "id": "sum-multiples",
+    "title": "Sum Multiples",
+    "difficulty": "Easy",
+    "tags": [
+      "Math"
+    ],
+    "statement": "Given an integer `n`, return the sum of all integers in the range `[1, n]` that are divisible by 3 or 5.",
+    "examples": [
+      {
+        "input": "n = 10",
+        "output": "33",
+        "explanation": "Numbers divisible by 3 or 5 are 3, 5, 6, 9, 10 and their sum is 33."
+      }
+    ],
+    "constraints": [
+      "1 <= n <= 1000"
+    ],
+    "starterCode": "function sumMultiples(n) {\n  // Your code here\n}",
+    "functionName": "sumMultiples",
+    "timeLimitMs": 1000,
+    "memoryLimitBytes": 67108864,
+    "visibleTests": [
+      {
+        "id": "visible-1",
+        "input": [
+          10
+        ],
+        "expected": 33,
+        "visibility": "visible"
+      }
+    ],
+    "hiddenTests": [
+      {
+        "id": "hidden-1",
+        "input": [
+          15
+        ],
+        "expected": 60,
+        "visibility": "hidden"
+      },
+      {
+        "id": "hidden-2",
+        "input": [
+          100
+        ],
+        "expected": 2418,
+        "visibility": "hidden"
+      }
+    ]
+  }
+]

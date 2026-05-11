@@ -21,6 +21,19 @@ In the repository settings, configure Pages to use GitHub Actions as the source.
 The workflow builds with `VITE_BASE_PATH=/${{ github.event.repository.name }}/`
 so project-site asset paths and React Router basename match the Pages URL.
 
+## Problem Generation
+
+Generated problem data lives in `src/data/generated/problems.generated.json`.
+Validate it with `npm run validate:problems`.
+Generate a new problem with:
+
+```bash
+npm run generate:problem -- --api-key YOUR_KEY
+```
+
+The generator also accepts `AI_API_KEY` or `API_KEY`, plus optional `--base-url`
+and `--model` overrides for compatible providers.
+
 ## Tech Stack
 
 - Vite + React + TypeScript
